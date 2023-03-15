@@ -1,0 +1,44 @@
+version: '3.7'
+
+services:
+  app:
+    # Name of the resulting image after build.
+    image: puzzles:latest
+    # The way we build image.
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Here we define dependencies for
+    # our service. We assume that without them
+    # our service won't start.
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - 8000:8000
+
+  database:
+    image: postgres:15.2-alpine
+    # volume is here to persist data
+    # between runs. By default no data is kept on shutdown.
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    # With environments we control database initialization
+    environment:
+      POSTGRES_DB: puzzles
+      POSTGRES_USER: puzzles
+      POSTGRES_PASSWORD: puzzles
+    restart: always
+    # Healthcheck constantly cheks whether database is up.
+    healthcheck:
+      test: pg_isready -U puzzles
+      interval: 2s
+      timeout: 3s
+      retries: 40
+    # Here we have exposed ports to host system.
+    ports:
+      - 5432:5432
+
+# Named volumes.
+volumes:
+  db-data:

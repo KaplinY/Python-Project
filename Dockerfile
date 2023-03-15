@@ -6,9 +6,9 @@ COPY pyproject.toml poetry.lock /project1/
 
 WORKDIR /project1/
 
-RUN poetry install
-
 RUN poetry config virtualenvs.create false
+
+RUN poetry install
 
 COPY . /project1/
 

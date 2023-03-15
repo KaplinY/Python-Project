@@ -8,11 +8,14 @@ WORKDIR /project1/
 
 RUN poetry install
 
+RUN poetry config virtualenvs.create false
+
 COPY . /project1/
 
 RUN poetry install
 
-CMD [ "C:\Users\kapli\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311", "-m" ,"project1"]
+CMD ["uvicorn project1.main:app"]
+
 
 
 

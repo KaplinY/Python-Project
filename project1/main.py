@@ -11,7 +11,7 @@ class Perc(BaseModel):
 app = FastAPI()
 
 
-@app.post("/calculate_percents/")
+@app.post("/calculate_percents")
 async def create_item(item: Perc):
     if item.percent < 0:
         return {"message": "try positive value"}

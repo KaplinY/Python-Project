@@ -41,6 +41,6 @@ with psycopg.connect("dbname=percents user=postgres") as conn:
             """)
         cur.execute("""
             INSERT INTO percernts_data(added, subtracted, percent, time)
-            VALUES (sum, sub, per, now)
+            VALUES (item_dict_result["added"], item_dict_result["subtacted"], item_dict_result["percent"], now)
         """)
         

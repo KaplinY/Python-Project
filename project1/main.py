@@ -4,17 +4,19 @@ from pydantic import BaseModel
 import psycopg
 from datetime import date
 from datetime import datetime
+import os
 
 class Perc(BaseModel):
     value: float
     percent: float
 
+DB_DSN = os.environ.get("postgresql://postgres:postgres@localhost:5432/percents")
 
 app = FastAPI()
 
 @app.on_event("startup")
 async def startup_event():
-    with psycopg.connect("dbname=percents user=postgres password=postgres") as conn:
+    with psycopg.connect(DB_DSN) as conn:
 
     # Open a cursor to perform database operations
         with conn.cursor() as cur:
@@ -40,7 +42,7 @@ async def create_item(item: Perc):
 
     now = datetime.now()
 
-    with psycopg.connect("dbname=percents user=postgres password=postgres") as conn:
+    with psycopg.connect(DB_DSN) as conn:
 
         with conn.cursor() as cur:
             cur.execute(

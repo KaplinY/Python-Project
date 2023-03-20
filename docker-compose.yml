@@ -25,13 +25,13 @@ services:
       - db-data:/var/lib/postgresql/data
     # With environments we control database initialization
     environment:
-      POSTGRES_DB: puzzles
-      POSTGRES_USER: puzzles
-      POSTGRES_PASSWORD: puzzles
+      POSTGRES_DB: percents
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     restart: always
     # Healthcheck constantly cheks whether database is up.
     healthcheck:
-      test: pg_isready -U puzzles
+      test: pg_isready -U postgres
       interval: 2s
       timeout: 3s
       retries: 40

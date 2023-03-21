@@ -5,12 +5,16 @@ import psycopg
 from datetime import date
 from datetime import datetime
 import os
+from dotenv import dotenv_values
+from dotenv import load_dotenv
 
 class Perc(BaseModel):
     value: float
     percent: float
 
-DB_DSN = os.environ.get("postgresql://postgres:postgres@localhost:5432/percents")
+load_dotenv()
+
+DB_DSN = os.getenv("DB_DSN")
 
 app = FastAPI()
 

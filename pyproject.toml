@@ -6,7 +6,7 @@ authors = ["Yaroslav <kapliny@mcmaster.ca>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.9"
 fastapi = "^0.94.0"
 uvicorn = "^0.21.0"
 

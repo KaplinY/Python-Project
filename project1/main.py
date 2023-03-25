@@ -12,6 +12,10 @@ class Perc(BaseModel):
     value: float
     percent: float
 
+class User(BaseModel):
+    username: str
+    password: str
+
 load_dotenv()
 
 DB_DSN = os.getenv("DB_DSN")
@@ -33,8 +37,39 @@ async def startup_event():
                     percent FLOAT (50) NOT NULL,
                     time TIMESTAMP)
                 """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    username VARCHAR (50) NOT NULL,
+                    password VARCHAR (50) NOT NULL)
+                """)
+     
+@app.post("/add_user")
+
+async def add_user(item: User):
+    username = item.username
+    password = item.password
+
+    wrong_symbols_list = ['\s','?','@','%','&']
+
+    res1 = any(ele in username for ele in wrong_symbols_list)
+    res2 = any(ele in password for ele in wrong_symbols_list)
+
+    if res1 == True or res2 == True:
+        return {"message": "invalid symbols"}
+    else:
+        with psycopg.connect(DB_DSN) as conn:
+
+            with conn.cursor() as cur:
+
+                cur.execute(
+                "INSERT INTO users (username, password) VALUES (%s, %s)",
+                (username,password)
+                )
+                
+    pass
 
 @app.post("/calculate_percents")
+
 async def create_item(item: Perc):
     if item.percent < 0:
         return {"message": "try positive value"}

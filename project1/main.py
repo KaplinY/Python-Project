@@ -5,16 +5,30 @@ import psycopg
 from datetime import date
 from datetime import datetime
 import os
-from dotenv import dotenv_values
-from dotenv import load_dotenv
+from pydantic import validator
+from pydantic import ValidationError
 
 class Perc(BaseModel):
     value: float
     percent: float
 
-load_dotenv()
+class User(BaseModel):
+    username: str
+    password: str
 
-DB_DSN = os.getenv("DB_DSN")
+    @validator('username')
+    def username_validation(cls, v):
+        if ' ' in v:
+            raise ValueError('username contains space')
+        return v
+    
+    @validator('password')
+    def password_validation(cls, v):
+        if ('!' or '&' or '$' or '%') not in v:
+            raise ValueError('password should contain one of the following symbols: !,&,$,%')
+        return v
+    
+DB_DSN = os.environ.get("DB_DSN")
 
 app = FastAPI()
 
@@ -33,6 +47,25 @@ async def startup_event():
                     percent FLOAT (50) NOT NULL,
                     time TIMESTAMP)
                 """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    username VARCHAR (50) NOT NULL,
+                    password VARCHAR (50) NOT NULL)
+                """)
+     
+@app.post("/add_user")
+async def add_user(item: User):
+
+    with psycopg.connect(DB_DSN) as conn:
+
+        with conn.cursor() as cur:
+
+            cur.execute(
+            "INSERT INTO users (username, password) VALUES (%s, %s)",
+            (item.username,item.password)
+            )
+                
+    pass
 
 @app.post("/calculate_percents")
 async def create_item(item: Perc):

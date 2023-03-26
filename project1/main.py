@@ -5,6 +5,8 @@ import psycopg
 from datetime import date
 from datetime import datetime
 import os
+from pydantic import validator
+from pydantic import ValidationError
 
 class Perc(BaseModel):
     value: float
@@ -14,6 +16,18 @@ class User(BaseModel):
     username: str
     password: str
 
+    @validator('username')
+    def username_validation(cls, v):
+        if ' ' in v:
+            raise ValueError('username contains space')
+        return v
+    
+    @validator('password')
+    def password_validation(cls, v):
+        if ('!' or '&' or '$' or '%') not in v:
+            raise ValueError('password should contain one of the following symbols: !,&,$,%')
+        return v
+    
 DB_DSN = os.environ.get("DB_DSN")
 
 app = FastAPI()
@@ -40,34 +54,20 @@ async def startup_event():
                 """)
      
 @app.post("/add_user")
-
 async def add_user(item: User):
-    username = item.username
-    password = item.password
 
-    user = [{"username":username, "password":password}]
+    with psycopg.connect(DB_DSN) as conn:
 
-    wrong_symbols_list = ['\s','?','@','%','&']
+        with conn.cursor() as cur:
 
-    res1 = any(ele in username for ele in wrong_symbols_list)
-    res2 = any(ele in password for ele in wrong_symbols_list)
-
-    if res1 == True or res2 == True:
-        return {"message": "invalid symbols"}
-    else:
-        with psycopg.connect(DB_DSN) as conn:
-
-            with conn.cursor() as cur:
-
-                cur.execute(
-                "INSERT INTO users (username, password) VALUES (%s, %s)",
-                (username,password)
-                )
+            cur.execute(
+            "INSERT INTO users (username, password) VALUES (%s, %s)",
+            (item.username,item.password)
+            )
                 
-    return user
+    pass
 
 @app.post("/calculate_percents")
-
 async def create_item(item: Perc):
     if item.percent < 0:
         return {"message": "try positive value"}

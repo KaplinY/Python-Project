@@ -5,8 +5,6 @@ import psycopg
 from datetime import date
 from datetime import datetime
 import os
-from dotenv import dotenv_values
-from dotenv import load_dotenv
 
 class Perc(BaseModel):
     value: float
@@ -16,9 +14,7 @@ class User(BaseModel):
     username: str
     password: str
 
-load_dotenv()
-
-DB_DSN = os.getenv("DB_DSN")
+DB_DSN = os.environ.get("DB_DSN")
 
 app = FastAPI()
 
@@ -49,6 +45,8 @@ async def add_user(item: User):
     username = item.username
     password = item.password
 
+    user = [{"username":username, "password":password}]
+
     wrong_symbols_list = ['\s','?','@','%','&']
 
     res1 = any(ele in username for ele in wrong_symbols_list)
@@ -66,7 +64,7 @@ async def add_user(item: User):
                 (username,password)
                 )
                 
-    pass
+    return user
 
 @app.post("/calculate_percents")
 

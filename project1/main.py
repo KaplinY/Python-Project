@@ -7,6 +7,7 @@ from datetime import datetime
 import os
 from pydantic import validator
 from pydantic import ValidationError
+from passlib.hash import pbkdf2_sha256
 
 class Perc(BaseModel):
     value: float
@@ -49,12 +50,14 @@ async def startup_event():
                 """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS users (
-                    username VARCHAR (50) NOT NULL,
-                    password VARCHAR (50) NOT NULL)
+                    username VARCHAR (100) NOT NULL,
+                    password VARCHAR (100) NOT NULL)
                 """)
      
 @app.post("/add_user")
 async def add_user(item: User):
+
+    hashed_password = pbkdf2_sha256.hash(item.password)
 
     with psycopg.connect(DB_DSN) as conn:
 
@@ -62,7 +65,7 @@ async def add_user(item: User):
 
             cur.execute(
             "INSERT INTO users (username, password) VALUES (%s, %s)",
-            (item.username,item.password)
+            (item.username,hashed_password)
             )
                 
     pass

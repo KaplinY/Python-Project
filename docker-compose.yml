@@ -17,10 +17,10 @@ services:
     ports:
       - 8000:8000
     environment:
-      DB_DSN: postgresql://postgres:postgres@database:5432/percents
+      DB_DSN: postgresql://percents:percents@database:5432/percents
 
   database:
-    image: postgres:15.2-alpine
+    image: postgres:13.8-bullseye
     # volume is here to persist data
     # between runs. By default no data is kept on shutdown.
     volumes:
@@ -28,12 +28,12 @@ services:
     # With environments we control database initialization
     environment:
       POSTGRES_DB: percents
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: percents
+      POSTGRES_PASSWORD: percents
     restart: always
     # Healthcheck constantly cheks whether database is up.
     healthcheck:
-      test: pg_isready -U postgres
+      test: pg_isready -U percents
       interval: 2s
       timeout: 3s
       retries: 40

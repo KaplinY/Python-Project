@@ -1,13 +1,21 @@
 from typing import Union
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 import psycopg
-from datetime import date
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import os
 from pydantic import validator
 from pydantic import ValidationError
 from passlib.hash import pbkdf2_sha256
+from jose import JWTError, jwt
+
+SECRET_KEY = "3cb260cf64fd0180f386da0e39d6c226137fe9abf98b738a70e4299e4c2afc93"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 class Perc(BaseModel):
     value: float
@@ -33,6 +41,24 @@ DB_DSN = os.environ.get("DB_DSN")
 
 app = FastAPI()
 
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def authenticate_user(username: str, password: str, hashed_password):
+    if not username:
+        return False
+    if not pbkdf2_sha256.verify(password, hashed_password):
+        return False
+    user = {username:password}
+    return user
+
 @app.on_event("startup")
 async def startup_event():
     with psycopg.connect(DB_DSN) as conn:
@@ -51,7 +77,8 @@ async def startup_event():
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     username VARCHAR (100) NOT NULL,
-                    password VARCHAR (100) NOT NULL)
+                    password VARCHAR (100) NOT NULL,
+                    JWT VARCHAR (100))
                 """)
      
 @app.post("/add_user")
@@ -69,6 +96,30 @@ async def add_user(item: User):
             )
                 
     pass
+
+@app.post("/authenticate_user")
+async def authenticate_user(item: User):
+
+    with psycopg.connect(DB_DSN) as conn:
+
+        with conn.cursor() as cur:
+            hashed_password = cur.execute(
+                "SELECT password FROM users WHERE username = '%s'",
+                (item.username))
+
+    user = authenticate_user(item.username, item.password, hashed_password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": item.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+       
 
 @app.post("/calculate_percents")
 async def create_item(item: Perc):

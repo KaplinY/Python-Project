@@ -10,6 +10,7 @@ from passlib.hash import pbkdf2_sha256
 from jose import jwt, JWTError
 from typing import Annotated
 from fastapi.security import OAuth2PasswordBearer
+import uuid
 
 
 SECRET_KEY = "3cb260cf64fd0180f386da0e39d6c226137fe9abf98b738a70e4299e4c2afc93"
@@ -90,18 +91,22 @@ async def startup_event():
 
         # Execute a command: this creates a new table
             cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id INT PRIMARY KEY,
+                    username VARCHAR (100),
+                    password VARCHAR (100)
+                    )
+                """)
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS percents_data (
                     added FLOAT (50),
                     subtracted FLOAT (50),
                     percent FLOAT (50),
                     time TIMESTAMP,
-                    FOREIGN_KEY VARCHAR)
+                    user_id INT,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE)
                 """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    username VARCHAR (100),
-                    password VARCHAR (100))
-                """)
+            
      
 @app.post("/add_user")
 async def add_user(item: User):
@@ -111,10 +116,16 @@ async def add_user(item: User):
     with psycopg.connect(DB_DSN) as conn:
 
         with conn.cursor() as cur:
-
+            user_id = cur.execute("SELECT MAX(user_id) FROM users")
+            user_id = user_id.fetchone()
+            user_id = user_id[0]
+            if user_id == None:
+                user_id = 1
+            else:
+                user_id = user_id + 1
             cur.execute(
-            "INSERT INTO users (username, password) VALUES (%s, %s)",
-            (item.username,hashed_password)
+            "INSERT INTO users (user_id, username, password) VALUES (%s, %s, %s)",
+            (user_id,item.username,hashed_password)
             )
                 
     pass
@@ -150,8 +161,6 @@ async def user_login(item: User):
 @app.post("/calculate_percents")
 async def create_item(item: Perc, user: dict = Depends(get_current_user)):
 
-    print(user)
-
     if item.percent < 0:
         return {"message": "try positive value"}
     else:
@@ -165,9 +174,14 @@ async def create_item(item: Perc, user: dict = Depends(get_current_user)):
     with psycopg.connect(DB_DSN) as conn:
 
         with conn.cursor() as cur:
+            user_id = cur.execute(
+                "SELECT user_id FROM users WHERE username = %s",
+                (user,))
+            user_id = user_id.fetchone()
+            user_id = user_id[0]
             cur.execute(
-            "INSERT INTO percents_data (added, subtracted, percent, time, FOREIGN_KEY) VALUES (%s, %s, %s, %s, %s)",
-            (item_dict_result["added"], item_dict_result["subtracted"], item_dict_result["percent"], now, user))
+            "INSERT INTO percents_data (added, subtracted, percent, time, user_id) VALUES (%s, %s, %s, %s, %s)",
+            (item_dict_result["added"], item_dict_result["subtracted"], item_dict_result["percent"], now, user_id))
 
 
     return item_dict_result

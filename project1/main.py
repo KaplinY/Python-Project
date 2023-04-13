@@ -5,12 +5,10 @@ import psycopg
 from datetime import datetime, date, timedelta
 import os
 from pydantic import validator
-from pydantic import ValidationError
 from passlib.hash import pbkdf2_sha256
 from jose import jwt, JWTError
 from typing import Annotated
 from fastapi.security import OAuth2PasswordBearer
-import uuid
 
 
 SECRET_KEY = "3cb260cf64fd0180f386da0e39d6c226137fe9abf98b738a70e4299e4c2afc93"
@@ -62,8 +60,7 @@ def authenticate_user(username, password, hashed_password):
         return False
     if not pbkdf2_sha256.verify(password, hashed_password):
         return False
-    user = {username:password}
-    return user
+    return True
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(

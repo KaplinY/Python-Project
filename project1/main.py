@@ -1,14 +1,16 @@
-from typing import Union, Any
-from fastapi import FastAPI, HTTPException, status, Depends, Header
+from typing import Any
+from fastapi import FastAPI, HTTPException, status, Depends, Request
 from pydantic import BaseModel
 import psycopg
-from datetime import datetime, date, timedelta
+import psycopg_pool
+from datetime import datetime, timedelta
 import os
 from pydantic import validator
 from passlib.hash import pbkdf2_sha256
 from jose import jwt, JWTError
 from typing import Annotated
 from fastapi.security import OAuth2PasswordBearer
+from project1.dependencies import get_pool
 
 
 SECRET_KEY = "3cb260cf64fd0180f386da0e39d6c226137fe9abf98b738a70e4299e4c2afc93"
@@ -78,13 +80,17 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     return (username)
 
 
-
 @app.on_event("startup")
 async def startup_event():
-    with psycopg.connect(DB_DSN) as conn:
+    app.state.db_pool = psycopg_pool.AsyncConnectionPool(DB_DSN, open = True,)
+
+    async with app.state.db_pool.connection() as conn:
+        conn
 
     # Open a cursor to perform database operations
-        with conn.cursor() as cur:
+    with psycopg.connect(DB_DSN) as conn: 
+
+        with conn.cursor(binary = True) as cur:
 
         # Execute a command: this creates a new table
             cur.execute("""
@@ -106,21 +112,19 @@ async def startup_event():
             
      
 @app.post("/add_user")
-async def add_user(item: User):
+async def add_user(item: User, db_conn: psycopg.AsyncConnection[Any] = Depends (get_pool)):
 
     hashed_password = pbkdf2_sha256.hash(item.password)
 
-    with psycopg.connect(DB_DSN) as conn:
-
-        with conn.cursor() as cur:
-            user_id = cur.execute("SELECT MAX(user_id) FROM users")
-            user_id = user_id.fetchone()
+    async with db_conn.cursor(binary = True) as cur:
+            user_id = await cur.execute("SELECT MAX(user_id) FROM users")
+            user_id = await user_id.fetchone()
             user_id = user_id[0]
             if user_id == None:
                 user_id = 1
             else:
                 user_id = user_id + 1
-            cur.execute(
+            await cur.execute(
             "INSERT INTO users (user_id, username, password) VALUES (%s, %s, %s)",
             (user_id,item.username,hashed_password)
             )
@@ -128,35 +132,33 @@ async def add_user(item: User):
     pass
 
 @app.post("/authenticate_user")
-async def user_login(item: User):
+async def user_login(item: User, db_conn: psycopg.AsyncConnection[Any] = Depends (get_pool)):
 
-    with psycopg.connect(DB_DSN) as conn:
-
-        with conn.cursor() as cur:
-            hashed_password = cur.execute(
-                "SELECT password FROM users WHERE username = %s",
-                (item.username,))
-            hashed_password = hashed_password.fetchone()
-            hashed_password = hashed_password[0]
+    async with db_conn.cursor() as cur:
+        hashed_password = await cur.execute(
+            "SELECT password FROM users WHERE username = %s",
+            (item.username,))
+        hashed_password = await hashed_password.fetchone()
+        hashed_password = hashed_password[0]
             
-            user = authenticate_user(item.username, item.password, hashed_password)
+        user = authenticate_user(item.username, item.password, hashed_password)
 
-            if not user:
-                raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
+        if not user:
+            raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
                 )
-            access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-            access_token = create_access_token(
-            data={"sub": item.username}, expires_delta=access_token_expires
-            )
-            return {"access_tocken": access_token}
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+        data={"sub": item.username}, expires_delta=access_token_expires
+        )
+        return {"access_tocken": access_token}
             
        
 
 @app.post("/calculate_percents")
-async def create_item(item: Perc, user: dict = Depends(get_current_user)):
+async def create_item(item: Perc, user: dict = Depends(get_current_user), db_conn: psycopg.AsyncConnection[Any] = Depends (get_pool)):
 
     if item.percent < 0:
         return {"message": "try positive value"}
@@ -168,17 +170,15 @@ async def create_item(item: Perc, user: dict = Depends(get_current_user)):
 
     now = datetime.now()
 
-    with psycopg.connect(DB_DSN) as conn:
-
-        with conn.cursor() as cur:
-            user_id = cur.execute(
-                "SELECT user_id FROM users WHERE username = %s",
-                (user,))
-            user_id = user_id.fetchone()
-            user_id = user_id[0]
-            cur.execute(
-            "INSERT INTO percents_data (added, subtracted, percent, time, user_id) VALUES (%s, %s, %s, %s, %s)",
-            (item_dict_result["added"], item_dict_result["subtracted"], item_dict_result["percent"], now, user_id))
+    async with db_conn.cursor() as cur:
+        user_id = await cur.execute(
+            "SELECT user_id FROM users WHERE username = %s",
+            (user,))
+        user_id = await user_id.fetchone()
+        user_id = user_id[0]
+        await cur.execute(
+        "INSERT INTO percents_data (added, subtracted, percent, time, user_id) VALUES (%s, %s, %s, %s, %s)",
+        (item_dict_result["added"], item_dict_result["subtracted"], item_dict_result["percent"], now, user_id))
 
 
     return item_dict_result

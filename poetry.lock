@@ -339,6 +339,21 @@ files = [
 ]
 
 [[package]]
+name = "psycopg-pool"
+version = "3.1.7"
+description = "Connection Pool for Psycopg"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "psycopg-pool-3.1.7.tar.gz", hash = "sha256:d02741dc48303495f4021900630442af87d6b1c3bfd1a3ece54cc11aa43d7dde"},
+    {file = "psycopg_pool-3.1.7-py3-none-any.whl", hash = "sha256:ca1f2c366b5910acd400e16e812912827c57836af638c1717ba495111d22073b"},
+]
+
+[package.dependencies]
+typing-extensions = ">=3.10"
+
+[[package]]
 name = "pyasn1"
 version = "0.4.8"
 description = "ASN.1 types and codecs"
@@ -557,4 +572,4 @@ standard = ["colorama (>=0.4)", "httptools (>=0.5.0)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "6b7beeb5ee679a423abed50802273cda71921f326c1817abd85612f8ad21253c"
+content-hash = "c327070cb10777a6b7978f49198d2cdc6cefb3bcafbd09f83d68c2d2ac469493"

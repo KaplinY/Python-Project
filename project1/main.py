@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, List, Optional
 from fastapi import FastAPI, HTTPException, status, Depends, Request
 from pydantic import BaseModel
 import psycopg
 import psycopg_pool
+import psycopg2
 from datetime import datetime, timedelta
 import os
 from pydantic import validator
@@ -10,7 +11,11 @@ from passlib.hash import pbkdf2_sha256
 from jose import jwt, JWTError
 from typing import Annotated
 from fastapi.security import OAuth2PasswordBearer
-from project1.dependencies import get_pool
+from project1.dependencies import get_pool, get_session
+import sqlalchemy as sa
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import ForeignKey, String, Integer, TIMESTAMP, create_engine, select
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker, Session
 
 
 SECRET_KEY = "3cb260cf64fd0180f386da0e39d6c226137fe9abf98b738a70e4299e4c2afc93"
@@ -43,6 +48,28 @@ class User(BaseModel):
             raise ValueError('password should contain one of the following symbols: !,&,$,%')
         return v
     
+class Base(DeclarativeBase): 
+    pass  
+
+class Users(Base):
+    __tablename__ = "users"
+
+    user_id: Mapped[int] = mapped_column(sa.BigInteger(), primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(sa.String(100), unique=True)
+    password: Mapped[str] = mapped_column(sa.Text)
+
+class Percents_data(Base):
+    __tablename__ = "percents_data"
+
+    id: Mapped[int] = mapped_column(sa.BigInteger(), primary_key=True, autoincrement=True)
+    added: Mapped[float] = mapped_column(sa.Float)
+    subtracted: Mapped[float] = mapped_column(sa.Float)
+    percent: Mapped[float] = mapped_column(sa.Float)
+    time: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"))
+    user: Mapped[Users] = relationship(Users, foreign_keys=[user_id], uselist=False)
+
+
 DB_DSN = os.environ.get("DB_DSN")
 
 app = FastAPI()
@@ -82,65 +109,29 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 
 @app.on_event("startup")
 async def startup_event():
-    app.state.db_pool = psycopg_pool.AsyncConnectionPool(DB_DSN, open = True,)
-
-    async with app.state.db_pool.connection() as conn:
-        conn
-
-    # Open a cursor to perform database operations
-    with psycopg.connect(DB_DSN) as conn: 
-
-        with conn.cursor(binary = True) as cur:
-
-        # Execute a command: this creates a new table
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    user_id INT PRIMARY KEY,
-                    username VARCHAR (100),
-                    password VARCHAR (100)
-                    )
-                """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS percents_data (
-                    added FLOAT (50),
-                    subtracted FLOAT (50),
-                    percent FLOAT (50),
-                    time TIMESTAMP,
-                    user_id INT,
-                    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE)
-                """)
+    engine = create_engine(
+    DB_DSN, pool_size=20, max_overflow=0
+    )
+    app.state.db_engine = engine
+    Base.metadata.create_all(engine)
+    app.state.sessionmaker = sessionmaker(engine)
             
      
 @app.post("/add_user")
-async def add_user(item: User, db_conn: psycopg.AsyncConnection[Any] = Depends (get_pool)):
+async def add_user(item: User, session: Session = Depends(get_session)):
 
     hashed_password = pbkdf2_sha256.hash(item.password)
-
-    async with db_conn.cursor(binary = True) as cur:
-            user_id = await cur.execute("SELECT MAX(user_id) FROM users")
-            user_id = await user_id.fetchone()
-            user_id = user_id[0]
-            if user_id == None:
-                user_id = 1
-            else:
-                user_id = user_id + 1
-            await cur.execute(
-            "INSERT INTO users (user_id, username, password) VALUES (%s, %s, %s)",
-            (user_id,item.username,hashed_password)
-            )
-                
-    pass
+    
+    new_user = Users(username = item.username, password = hashed_password)
+    session.add(new_user)
+    session.flush()
+    
 
 @app.post("/authenticate_user")
-async def user_login(item: User, db_conn: psycopg.AsyncConnection[Any] = Depends (get_pool)):
+async def user_login(item: User, session: Session = Depends(get_session)):
 
-    async with db_conn.cursor() as cur:
-        hashed_password = await cur.execute(
-            "SELECT password FROM users WHERE username = %s",
-            (item.username,))
-        hashed_password = await hashed_password.fetchone()
-        hashed_password = hashed_password[0]
-            
+        stmt = select(Users.password).where(Users.username == item.username)
+        hashed_password = session.scalar(stmt)  
         user = authenticate_user(item.username, item.password, hashed_password)
 
         if not user:
@@ -158,7 +149,7 @@ async def user_login(item: User, db_conn: psycopg.AsyncConnection[Any] = Depends
        
 
 @app.post("/calculate_percents")
-async def create_item(item: Perc, user: dict = Depends(get_current_user), db_conn: psycopg.AsyncConnection[Any] = Depends (get_pool)):
+async def create_item(item: Perc, user: dict = Depends(get_current_user), session: Session = Depends(get_session)):
 
     if item.percent < 0:
         return {"message": "try positive value"}
@@ -170,16 +161,10 @@ async def create_item(item: Perc, user: dict = Depends(get_current_user), db_con
 
     now = datetime.now()
 
-    async with db_conn.cursor() as cur:
-        user_id = await cur.execute(
-            "SELECT user_id FROM users WHERE username = %s",
-            (user,))
-        user_id = await user_id.fetchone()
-        user_id = user_id[0]
-        await cur.execute(
-        "INSERT INTO percents_data (added, subtracted, percent, time, user_id) VALUES (%s, %s, %s, %s, %s)",
-        (item_dict_result["added"], item_dict_result["subtracted"], item_dict_result["percent"], now, user_id))
-
+    stmt = select(Users.user_id).where(Users.username == user)
+    user_id = session.scalar(stmt)
+    new_perc = Percents_data(added = sum, subtracted = sub, percent = per, time = now, user_id = user_id)
+    session.add(new_perc)
 
     return item_dict_result
 

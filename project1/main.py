@@ -6,17 +6,22 @@ import psycopg_pool
 import psycopg2
 from datetime import datetime, timedelta
 import os
+import asyncio
+import asyncpg
 from pydantic import validator
 from passlib.hash import pbkdf2_sha256
 from jose import jwt, JWTError
 from typing import Annotated
 from fastapi.security import OAuth2PasswordBearer
-from project1.dependencies import get_pool, get_session
+from project1.dependencies import get_pool, get_async_session
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy import ForeignKey, String, Integer, TIMESTAMP, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker, Session
-
+from sqlalchemy import func
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm import selectinload
+from contextlib import asynccontextmanager
 
 SECRET_KEY = "3cb260cf64fd0180f386da0e39d6c226137fe9abf98b738a70e4299e4c2afc93"
 ALGORITHM = "HS256"
@@ -109,47 +114,51 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 
 @app.on_event("startup")
 async def startup_event():
-    engine = create_engine(
-    DB_DSN, pool_size=20, max_overflow=0
+    engine = create_async_engine(
+    DB_DSN, echo = True,
     )
     app.state.db_engine = engine
-    Base.metadata.create_all(engine)
-    app.state.sessionmaker = sessionmaker(engine)
+
+    app.state.async_sessionmaker = async_sessionmaker(
+    engine, expire_on_commit=False
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
             
      
 @app.post("/add_user")
-async def add_user(item: User, session: Session = Depends(get_session)):
+async def add_user(item: User, session: AsyncSession = Depends(get_async_session)):
 
     hashed_password = pbkdf2_sha256.hash(item.password)
-    
     new_user = Users(username = item.username, password = hashed_password)
     session.add(new_user)
-    session.flush()
+    await session.commit()
+    await session.flush()
     
 
 @app.post("/authenticate_user")
-async def user_login(item: User, session: Session = Depends(get_session)):
+async def user_login(item: User, session: AsyncSession = Depends(get_async_session)):
 
-        stmt = select(Users.password).where(Users.username == item.username)
-        hashed_password = session.scalar(stmt)  
-        user = authenticate_user(item.username, item.password, hashed_password)
+    stmt = select(Users.password).where(Users.username == item.username)
+    hashed_password = await session.scalar(stmt)  
+    user = authenticate_user(item.username, item.password, hashed_password)
 
-        if not user:
-            raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-                )
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-        data={"sub": item.username}, expires_delta=access_token_expires
-        )
-        return {"access_tocken": access_token}
+    if not user:
+        raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect username or password",
+        headers={"WWW-Authenticate": "Bearer"},
+            )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+    data={"sub": item.username}, expires_delta=access_token_expires
+    )
+    return {"access_tocken": access_token}
             
        
 
 @app.post("/calculate_percents")
-async def create_item(item: Perc, user: dict = Depends(get_current_user), session: Session = Depends(get_session)):
+async def create_item(item: Perc, user: dict = Depends(get_current_user), session: AsyncSession = Depends(get_async_session)):
 
     if item.percent < 0:
         return {"message": "try positive value"}
@@ -162,9 +171,11 @@ async def create_item(item: Perc, user: dict = Depends(get_current_user), sessio
     now = datetime.now()
 
     stmt = select(Users.user_id).where(Users.username == user)
-    user_id = session.scalar(stmt)
+    user_id = await session.scalar(stmt)
+
     new_perc = Percents_data(added = sum, subtracted = sub, percent = per, time = now, user_id = user_id)
     session.add(new_perc)
+    await session.commit()
 
     return item_dict_result
 

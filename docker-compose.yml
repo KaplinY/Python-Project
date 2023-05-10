@@ -1,7 +1,7 @@
 version: '3.7'
 
 services:
-  app:
+  app: &app
     # Name of the resulting image after build.
     image: puzzles:latest
     # The way we build image.
@@ -12,12 +12,21 @@ services:
     # our service. We assume that without them
     # our service won't start.
     depends_on:
+      db-migrator:
+        condition: service_completed_successfully
       database:
         condition: service_healthy
     ports:
       - 8000:8000
     environment:
       DB_DSN: postgresql+asyncpg://percents:percents@database:5432/percents
+  db-migrator:
+    <<: *app
+    command: [alembic, upgrade, head]
+    ports: []
+    depends_on:
+      database:
+        condition: service_healthy
 
   database:
     image: postgres:13.8-bullseye

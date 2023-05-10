@@ -53,8 +53,10 @@ class User(BaseModel):
             raise ValueError('password should contain one of the following symbols: !,&,$,%')
         return v
     
-class Base(DeclarativeBase): 
-    pass  
+db_meta = sa.MetaData() 
+
+class Base(DeclarativeBase):
+    metadata = db_meta 
 
 class Users(Base):
     __tablename__ = "users"
@@ -122,8 +124,6 @@ async def startup_event():
     app.state.async_sessionmaker = async_sessionmaker(
     engine, expire_on_commit=False
     )
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
             
      
 @app.post("/add_user")

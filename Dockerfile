@@ -14,4 +14,4 @@ COPY . /project1/
 
 RUN poetry install
 
-CMD ["uvicorn", "--host", "0.0.0.0", "project1.main:app"]
+CMD ["uvicorn", "--host", "0.0.0.0", "project1.app:app"]

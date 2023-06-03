@@ -1,9 +1,7 @@
 from fastapi import Request
 from typing import Any
 import psycopg
-from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
-from contextlib import asynccontextmanager
 
 async def get_pool(request: Request) -> psycopg.AsyncConnection[Any]:
     async with request.app.state.db_pool.connection() as conn:

@@ -7,7 +7,7 @@ from project1.dependencies.dependencies import get_async_session
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from .dtos import Percents
 from project1.db.models import Users, Percents_data
 
@@ -15,7 +15,7 @@ SECRET_KEY = "3cb260cf64fd0180f386da0e39d6c226137fe9abf98b738a70e4299e4c2afc93"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token", scheme_name="JWT")
 
 db_meta = sa.MetaData() 
 
@@ -23,7 +23,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+async def get_current_user(token: str = Header(default=None)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

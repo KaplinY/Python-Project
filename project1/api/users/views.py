@@ -64,4 +64,4 @@ async def user_login(item: User, session: AsyncSession = Depends(get_async_sessi
     access_token = create_access_token(
     data={"sub": item.username}, expires_delta=access_token_expires
     )
-    return {"access_tocken": access_token}
+    return {"access_token": access_token, "token_type": "bearer"}

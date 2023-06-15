@@ -19,10 +19,13 @@ sqlalchemy = "^2.0.10"
 psycopg2-binary = "^2.9.6"
 asyncpg = "^0.27.0"
 alembic = "^1.10.4"
+pytest = "^7.3.2"
+httpx = "^0.24.1"
 
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
+anyio = "^3.7.0"
 
 [build-system]
 requires = ["poetry-core"]

@@ -13,11 +13,11 @@ jobs:
           POSTGRES_DB: percents
           POSTGRES_USER: percents
           POSTGRES_PASSWORD: percents
-        options: >-
-          --health-cmd="mysqladmin ping -u root"
-          --health-interval=15s
-          --health-timeout=5s
-          --health-retries=6
+        healthcheck:
+          test: pg_isready -U percents
+          interval: 2s
+          timeout: 3s
+          retries: 40
         ports:
         - 5432:5432
     steps:

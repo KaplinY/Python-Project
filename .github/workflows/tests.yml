@@ -5,6 +5,8 @@ on: push
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://percents:percents@localhost:5432/percents
     services:
 
       github_test-db:

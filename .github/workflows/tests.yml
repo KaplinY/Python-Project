@@ -13,11 +13,11 @@ jobs:
           POSTGRES_DB: percents
           POSTGRES_USER: percents
           POSTGRES_PASSWORD: percents
-        healthcheck:
-          test: pg_isready -U percents
-          interval: 2s
-          timeout: 3s
-          retries: 40
+        options: >-
+          --health-cmd="pg_isready -U percents"
+          --health-interval=2s
+          --health-timeout=3s
+          --health-retries=40
         ports:
         - 5432:5432
     steps:

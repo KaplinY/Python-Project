@@ -10,11 +10,9 @@ jobs:
       github_test-db:
         image: postgres:13.8-bullseye
         env:
-          POSTGRES_HOST_AUTH_METHOD: trust
-          MYSQL_ROOT_PASSWORD: "percents"
-          MYSQL_ROOT_USER: "percents"
-          MYSQL_DATABASE: "percents"
-          MYSQL_AUTHENTICATION_PLUGIN: "mysql_native_password"
+          POSTGRES_DB: percents
+          POSTGRES_USER: percents
+          POSTGRES_PASSWORD: percent
         options: >-
           --health-cmd="mysqladmin ping -u root"
           --health-interval=15s

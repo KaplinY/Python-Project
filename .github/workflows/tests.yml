@@ -6,7 +6,7 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     env:
-      SQLALCHEMY_URL: postgresql+asyncpg://percents:percents@localhost:5432/percents
+      DB_DSN: postgresql+asyncpg://percents:percents@database:5432/percents
     services:
 
       github_test-db:
@@ -35,6 +35,6 @@ jobs:
     - name: Run pytest
       run: pytest -vv
       env:
-        SQLALCHEMY_URL: postgresql+asyncpg://percents:percents@localhost:5432/percents
+        DB_DSN: postgresql+asyncpg://percents:percents@database:5432/percents
         GITHUB_TEST_HOST: "0.0.0.0"
         GITHUB_TEST_DB_HOST: localhost

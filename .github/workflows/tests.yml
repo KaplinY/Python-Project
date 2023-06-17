@@ -1,0 +1,38 @@
+name: Testing project1
+
+on: push
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    services:
+
+      github_test-db:
+        image: bitnami/mysql:8.0.30
+        env:
+          MYSQL_ROOT_PASSWORD: "percents"
+          MYSQL_ROOT_USER: "percents"
+          MYSQL_DATABASE: "percents"
+          MYSQL_AUTHENTICATION_PLUGIN: "mysql_native_password"
+        options: >-
+          --health-cmd="mysqladmin ping -u root"
+          --health-interval=15s
+          --health-timeout=5s
+          --health-retries=6
+        ports:
+        - 8000:8000
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.9'
+    - name: Install deps
+      uses: knowsuchagency/poetry-install@v1
+      env:
+        POETRY_VIRTUALENVS_CREATE: false
+    - name: Run pytest
+      run: pytest -vv
+      env:
+        GITHUB_TEST_HOST: "0.0.0.0"
+        GITHUB_TEST_DB_HOST: localhost

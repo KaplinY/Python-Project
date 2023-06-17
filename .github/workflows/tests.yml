@@ -9,7 +9,7 @@ jobs:
       DB_DSN: postgresql+asyncpg://percents:percents@postgres:5432/percents
     services:
 
-      github_test-db:
+      postgres:
         image: postgres:13.8-bullseye
         env:
           POSTGRES_DB: percents

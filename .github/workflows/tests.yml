@@ -4,11 +4,11 @@ on: push
 
 jobs:
   pytest:
-    runs-on: postgres:13.8-bullseye
+    runs-on: ubuntu-latest
     services:
 
       github_test-db:
-        image: bitnami/mysql:8.0.30
+        image: postgres:13.8-bullseye
         env:
           MYSQL_ROOT_PASSWORD: "percents"
           MYSQL_ROOT_USER: "percents"

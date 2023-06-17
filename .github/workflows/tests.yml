@@ -12,7 +12,7 @@ jobs:
         env:
           POSTGRES_DB: percents
           POSTGRES_USER: percents
-          POSTGRES_PASSWORD: percent
+          POSTGRES_PASSWORD: percents
         options: >-
           --health-cmd="mysqladmin ping -u root"
           --health-interval=15s

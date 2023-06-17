@@ -5,8 +5,7 @@ on: push
 jobs:
   pytest:
     runs-on: ubuntu-latest
-    env:
-      DB_DSN: postgresql+asyncpg://percents:percents@postgres:5432/percents
+
     services:
 
       postgres:
@@ -35,6 +34,6 @@ jobs:
     - name: Run pytest
       run: pytest -vv
       env:
-        DB_DSN: postgresql+asyncpg://percents:percents@postgres:5432/percents
-        POSTGRES_HOST: postgres
+        DB_DSN: postgresql+asyncpg://percents:percents@localhost:5432/percents
+        POSTGRES_HOST: localhost
         POSTGRES_PORT: 5432

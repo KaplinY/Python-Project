@@ -8,7 +8,7 @@ jobs:
     services:
 
       github_test-db:
-        image: postgres:13.8-bullseye
+        image: bitnami/mysql:8.0.30
         env:
           MYSQL_ROOT_PASSWORD: "percents"
           MYSQL_ROOT_USER: "percents"

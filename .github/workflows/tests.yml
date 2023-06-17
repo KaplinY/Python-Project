@@ -23,10 +23,10 @@ jobs:
         - 8000:8000
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.9
+    - name: Set up Python 3.11
       uses: actions/setup-python@v3
       with:
-        python-version: '3.9'
+        python-version: '3.11'
     - name: Install deps
       uses: knowsuchagency/poetry-install@v1
       env:

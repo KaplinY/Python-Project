@@ -1,0 +1,39 @@
+name: Testing project1
+
+on: push
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    services:
+
+      postgres:
+        image: postgres:13.8-bullseye
+        env:
+          POSTGRES_DB: percents
+          POSTGRES_USER: percents
+          POSTGRES_PASSWORD: percents
+        options: >-
+          --health-cmd="pg_isready -U percents"
+          --health-interval=2s
+          --health-timeout=3s
+          --health-retries=40
+        ports:
+        - 5432:5432
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.11'
+    - name: Install deps
+      uses: knowsuchagency/poetry-install@v1
+      env:
+        POETRY_VIRTUALENVS_CREATE: false
+    - name: Run pytest
+      run: pytest -vv
+      env:
+        DB_DSN: postgresql+asyncpg://percents:percents@localhost:5432/percents
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: 5432

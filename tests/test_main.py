@@ -12,7 +12,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 async def test_add_user(test_app: AsyncClient):
     response = await test_app.post(
         "/users/add_user",
-        json={"username":"user123", "password":"user123!"},
+        json={"username":"user123", "password":"user123!", "email":"user123@y.ru"},
     )
     assert response.status_code == 200
     assert response.json() == None
@@ -31,7 +31,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 async def test_authenticate_user(test_app: AsyncClient):
     response = await test_app.post(
         "/users/authenticate_user",
-        json={"username":"user", "password":"user!"},
+        json={"username":"user", "password":"user!", "email":"user123@y.ru"},
     )
     assert response.status_code == 200
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)

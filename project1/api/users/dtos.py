@@ -4,6 +4,7 @@ from pydantic import validator
 class User(BaseModel):
     username: str
     password: str
+    email: str
 
     @validator('username')
     def username_validation(cls, v):
@@ -15,6 +16,11 @@ class User(BaseModel):
     def password_validation(cls, v):
         if ('!' or '&' or '$' or '%') not in v:
             raise ValueError('password should contain one of the following symbols: !,&,$,%')
+        return v
+    @validator('email')
+    def email_validator(cls, v):
+        if ('@' and '.') not in v:
+            raise ValueError('not correct email adress')
         return v
 
 class Token(BaseModel):

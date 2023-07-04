@@ -11,7 +11,7 @@ from project1.db.models import db_meta
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-DB_DSN = os.environ.get("DB_DSN")
+DB_DSN = "postgresql+asyncpg://percents:percents@database:5432/percents"
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
@@ -67,7 +67,7 @@ async def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = create_async_engine(str(DB_DSN))
+    connectable = create_async_engine(DB_DSN)
 
     async with connectable.connect() as connection:
         await connection.run_sync(show_migrations)

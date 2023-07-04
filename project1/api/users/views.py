@@ -6,9 +6,11 @@ from project1.dependencies.dependencies import get_async_session
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from .dtos import User, Token
 from project1.db.models import Users
+from aio_pika import Message, connect
+from project1.api.percents.views import get_current_user
 
 SECRET_KEY = "3cb260cf64fd0180f386da0e39d6c226137fe9abf98b738a70e4299e4c2afc93"
 ALGORITHM = "HS256"
@@ -41,7 +43,7 @@ def authenticate_user(username, password, hashed_password):
 async def add_user(item: User, session: AsyncSession = Depends(get_async_session)):
 
     hashed_password = pbkdf2_sha256.hash(item.password)
-    new_user = Users(username = item.username, password = hashed_password)
+    new_user = Users(username = item.username, password = hashed_password, email = item.email)
     session.add(new_user)
     await session.commit()
     await session.flush()
@@ -65,3 +67,23 @@ async def user_login(item: User, session: AsyncSession = Depends(get_async_sessi
     data={"sub": item.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/user_stats")
+async def get_user_stats(user: dict = Depends(get_current_user), session: AsyncSession = Depends(get_async_session)):
+
+    stmt = select(Users.user_id).where(Users.username == user)
+    user_id = await session.scalar(stmt)
+
+    connection = await connect("amqp://guest:guest@localhost/")
+
+    async with connection:
+
+        channel = await connection.channel()
+
+        queue = await channel.declare_queue("stats")
+        
+        await channel.default_exchange.publish(
+            Message(user_id),
+            routing_key=queue.name,
+        )
+    return {user_id}

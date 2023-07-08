@@ -13,6 +13,8 @@ import aio_pika
 from aio_pika.abc import AbstractRobustConnection
 from aio_pika.pool import Pool
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+import smtplib
+
 
 MQ_DSN = os.environ.get("MQ_DSN")
 
@@ -36,6 +38,8 @@ async def on_message(message: AbstractIncomingMessage) -> None:
     user_id = message.body
     user_id.decode()
     user_id = int(user_id)
+    stmt = select(Users.email).where(Users.user_id == user_id)
+    email = await session.scalar(stmt)
     session = get_session()
 
     stmt = select(Percents_data.percent).where(Percents_data.user_id == user_id)
@@ -50,7 +54,23 @@ async def on_message(message: AbstractIncomingMessage) -> None:
         median = (subtracted[length / 2 - 1] + subtracted[length / 2])/2
     else:
         median = subtracted[length // 2]
-    result = {"average percent":avg_percent, "all_entries":all_entries,"median of all subtractions":median}
+    result = str({"average percent":avg_percent, "all_entries":all_entries,"median of all subtractions":median})
+
+    FROM = 'monty@python.com'
+    TO = [email] 
+    SUBJECT = "Stats"
+    TEXT = result
+
+    message = """\
+    From: %s
+    To: %s
+    Subject: %s
+
+    %s
+    """ % (FROM, ", ".join(TO), SUBJECT, TEXT)
+    server = smtplib.SMTP('myserver')
+    server.sendmail(FROM, TO, message)
+    server.quit()
     
     return result
 

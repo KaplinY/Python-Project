@@ -20,6 +20,7 @@ services:
       - 8000:8000
     environment:
       DB_DSN: postgresql+asyncpg://percents:percents@database:5432/percents
+      
   db-migrator:
     <<: *app
     command: [alembic, upgrade, head]
@@ -27,6 +28,25 @@ services:
     depends_on:
       database:
         condition: service_healthy
+        
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: 'rabbitmq'
+    ports:
+        - 5672:5672
+        - 15672:15672
+    environment:
+      MQ_DSN: amqp://guest:guest@rabbitmq:5672/
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  consumer:
+    <<: *app
+    command: [python, project1/consumer.py]
+    ports: []
 
   database:
     image: postgres:13.8-bullseye
@@ -53,3 +73,4 @@ services:
 # Named volumes.
 volumes:
   db-data:
+

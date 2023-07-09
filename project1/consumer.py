@@ -1,8 +1,5 @@
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Depends
-from project1.dependencies.dependencies import get_async_session
-from aio_pika import connect
 from aio_pika.abc import AbstractIncomingMessage
 from sqlalchemy import select
 from project1.db.models import Users
@@ -12,36 +9,37 @@ import os
 import aio_pika
 from aio_pika.abc import AbstractRobustConnection
 from aio_pika.pool import Pool
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 import smtplib
 
 
 MQ_DSN = os.environ.get("MQ_DSN")
 
-engine = create_async_engine(
+async def get_session():
+        engine = create_async_engine(
         os.environ.get("DB_DSN"), echo = True,
         )
-async_sessionmaker = async_sessionmaker(
-        engine, expire_on_commit=False
-        )
+        async_session = async_sessionmaker(
+                engine, expire_on_commit=False
+                )
+        async with async_session as session:
+            try:
+                yield session
+            except Exception:
+                await session.rollback()
+                return
+        await session.commit()
 
-async def get_session():
-    async with async_sessionmaker as session:
-        try:
-            yield session
-        except Exception:
-            await session.rollback()
-            return
-
-async def on_message(message: AbstractIncomingMessage) -> None:
-    
+async def on_message(message: AbstractIncomingMessage, session: AsyncSession):
     user_id = message.body
+    print(user_id)
     user_id.decode()
-    user_id = int(user_id)
+    for i in range(len(user_id)):
+        if user_id[i] == "'":
+            user_id = user_id[i+1]
+    print(user_id)
     stmt = select(Users.email).where(Users.user_id == user_id)
     email = await session.scalar(stmt)
-    session = get_session()
-
     stmt = select(Percents_data.percent).where(Percents_data.user_id == user_id)
     percent = await session.scalar(stmt)
     avg_percent = mean(percent)
@@ -61,15 +59,15 @@ async def on_message(message: AbstractIncomingMessage) -> None:
     SUBJECT = "Stats"
     TEXT = result
 
-    message = """\
+    email_message = """\
     From: %s
     To: %s
     Subject: %s
-
+    
     %s
     """ % (FROM, ", ".join(TO), SUBJECT, TEXT)
     server = smtplib.SMTP('myserver')
-    server.sendmail(FROM, TO, message)
+    server.sendmail(FROM, TO, email_message)
     server.quit()
     
     return result
@@ -88,14 +86,28 @@ async def main() -> None:
         async with connection_pool.acquire() as connection:
             return await connection.channel()
 
-    channel_pool: Pool = Pool(get_channel, max_size=10, loop=loop)
+    channel_pool: Pool = Pool(get_channel, max_size=10, loop=loop)  
+                
+    session = get_session()
 
-    async with channel_pool.acquire() as channel:
+    async def consume() -> None:
+        async with channel_pool.acquire() as channel:
+            await channel.set_qos(10)
 
-        queue = await channel.declare_queue(
-            "stats", durable=False, auto_delete=False,
-        )
-        new_message = await queue.consume(on_message, no_ack=True)
+            queue = await channel.declare_queue(
+                "stats", durable=False, auto_delete=False,
+            )
+
+            async with queue.iterator() as queue_iter:
+                async for message in queue_iter:
+                    async with message.process():
+                        result = await on_message(message, session)
+                        print(result)
+                    await message.ack()
+
+    async with connection_pool, channel_pool:
+        task = loop.create_task(consume())
+        await task
     
 if __name__ == "__main__":
     asyncio.run(main())

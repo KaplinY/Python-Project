@@ -10,7 +10,6 @@ import asyncio
 def init_app(app: FastAPI): 
     @app.on_event("startup")
     async def startup_event():
-        print(os.environ.get("DB_DSN"))
         engine = create_async_engine(
         os.environ.get("DB_DSN"), echo = True,
         )
@@ -22,8 +21,7 @@ def init_app(app: FastAPI):
     @app.on_event("startup")
     async def startup_rabbitmq():
         async def get_connection() -> AbstractRobustConnection:
-            return await aio_pika.connect_robust(MQ_DSN)
-        MQ_DSN = os.environ.get("MQ_DSN")
+            return await aio_pika.connect_robust(os.environ.get("MQ_DSN"))
         loop = asyncio.get_event_loop()
         connection_pool: Pool = Pool(get_connection, max_size = 2, loop = loop)
         app.state.connection_pool = connection_pool

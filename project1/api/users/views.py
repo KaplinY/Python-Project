@@ -1,4 +1,4 @@
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Request
 from datetime import datetime, timedelta
 from passlib.hash import pbkdf2_sha256
 from jose import jwt
@@ -77,11 +77,9 @@ async def get_user_stats(user: dict = Depends(get_current_user), session: AsyncS
 
     stmt = select(Users.user_id).where(Users.username == user)
     user_id = await session.scalar(stmt)
-
-    queue = await channel.declare_queue("stats")
         
     await channel.default_exchange.publish(
         Message(str(user_id).encode()),
-        routing_key=queue.name,
+        routing_key="stats",
     )
     return {user_id}

@@ -25,5 +25,19 @@ def init_app(app: FastAPI):
         loop = asyncio.get_event_loop()
         connection_pool: Pool = Pool(get_connection, max_size = 2, loop = loop)
         app.state.connection_pool = connection_pool
+        async def get_channel() -> aio_pika.Channel:
+            async with connection_pool.acquire() as connection:
+                return await connection.channel()
+        channel_pool: Pool = Pool(get_channel, max_size=10, loop=loop)
+        queue_name = "stats"
+        async with channel_pool.acquire() as channel:  # type: aio_pika.Channel
+            await channel.set_qos(10)
+
+            queue = await channel.declare_queue(
+                queue_name, durable=True
+            )
+            
+        
+
         
 

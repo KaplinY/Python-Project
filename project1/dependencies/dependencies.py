@@ -26,3 +26,5 @@ async def get_channel(request: Request) -> aio_pika.Channel:
     async with request.app.state.connection_pool.acquire() as connection:
             return await connection.channel()
     
+
+    

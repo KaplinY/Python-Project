@@ -21,6 +21,18 @@ jobs:
           --health-retries=40
         ports:
         - 5432:5432
+      rabbitmq:
+        image: rabbitmq:3-management-alpine
+        container_name: 'rabbitmq'
+        ports:
+            - 5672:5672
+            - 15672:15672
+        healthcheck:
+          test: rabbitmq-diagnostics -q ping
+          interval: 30s
+          timeout: 30s
+          retries: 3
+          
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.11

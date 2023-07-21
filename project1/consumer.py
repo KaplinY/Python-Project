@@ -21,46 +21,51 @@ async def on_message(message: AbstractIncomingMessage, session: AsyncSession):
     user_id = message.body
     user_id.decode()
     user_id = int(user_id)
-    print(user_id)
     stmt = select(Users.email).where(Users.user_id == user_id)
     email = await session.scalar(stmt)
     email = str(email)
-    print(email)
     stmt = select(Percents_data.percent).where(Percents_data.user_id == user_id)
     percent = await session.scalars(stmt)
     percent = percent.fetchall()
     #percent = await session.execute(stmt)
     #percent = percent.fetchall()
-    print(percent)
-    avg_percent = sum(percent)/len(percent)
-    all_entries = len(percent)
+    avg_percent = str(sum(percent)/len(percent))
+    all_entries = str(len(percent))
     stmt = select(Percents_data.subtracted).where(Percents_data.user_id == user_id)
     subtracted = await session.scalars(stmt)
     subtracted = subtracted.fetchall()
     subtracted.sort()
     length = len(subtracted)
-    print(subtracted)
     if length % 2 == 0:
         median = (subtracted[length // 2 - 1] + subtracted[length // 2])/2
     else:
         median = subtracted[length // 2]
+    median = str(median)
     result = str({"average percent":avg_percent, "all_entries":all_entries,"median of all subtractions":median})
     #sending email part
     msg = MIMEMultipart()
  
-    message = result
+    html = """
+    <h1 style="text-align: center;"><span style="color: #ff6800;"><strong>Requested statistics</strong></span></h1>
+    <p>Average percent of all calculations: %s</p>
+    <hr>
+    <p>All entries: %s</p>
+    <hr>
+    <p>Median of all subtractions: %s</p>
+    <p>&nbsp;</p>
+    """%(avg_percent, all_entries, median)
+
+    msg.attach(MIMEText(html, 'html'))
     
     # setup the parameters of the message 
     msg['From'] = "kaplin999@yandex.ru"
     msg['To'] = email
     msg['Subject'] = "User's stats"
-    msg.attach(MIMEText(message, 'plain'))
  
     server = smtplib.SMTP("85.10.195.40",30025)
     server.sendmail(msg['From'], msg['To'], msg.as_string())
     server.quit()
     #end of this part
-    print(result)
     return result
 
 

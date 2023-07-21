@@ -11,6 +11,8 @@ from aio_pika.abc import AbstractRobustConnection
 from aio_pika.pool import Pool
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 
 MQ_DSN = os.environ.get("MQ_DSN")
@@ -22,6 +24,7 @@ async def on_message(message: AbstractIncomingMessage, session: AsyncSession):
     print(user_id)
     stmt = select(Users.email).where(Users.user_id == user_id)
     email = await session.scalar(stmt)
+    email = str(email)
     print(email)
     stmt = select(Percents_data.percent).where(Percents_data.user_id == user_id)
     percent = await session.scalars(stmt)
@@ -36,27 +39,26 @@ async def on_message(message: AbstractIncomingMessage, session: AsyncSession):
     subtracted = subtracted.fetchall()
     subtracted.sort()
     length = len(subtracted)
+    print(subtracted)
     if length % 2 == 0:
-        median = (subtracted[length / 2 - 1] + subtracted[length / 2])/2
+        median = (subtracted[length // 2 - 1] + subtracted[length // 2])/2
     else:
         median = subtracted[length // 2]
     result = str({"average percent":avg_percent, "all_entries":all_entries,"median of all subtractions":median})
     #sending email part
-    # FROM = 'monty@python.com'
-    # TO = [email] 
-    # SUBJECT = "Stats"
-    # TEXT = result
-
-    # email_message = """\
-    # From: %s
-    # To: %s
-    # Subject: %s
+    msg = MIMEMultipart()
+ 
+    message = result
     
-    # %s
-    # """ % (FROM, ", ".join(TO), SUBJECT, TEXT)
-    # server = smtplib.SMTP('myserver')
-    # server.sendmail(FROM, TO, email_message)
-    # server.quit()
+    # setup the parameters of the message 
+    msg['From'] = "kaplin999@yandex.ru"
+    msg['To'] = email
+    msg['Subject'] = "User's stats"
+    msg.attach(MIMEText(message, 'plain'))
+ 
+    server = smtplib.SMTP("85.10.195.40",30025)
+    server.sendmail(msg['From'], msg['To'], msg.as_string())
+    server.quit()
     #end of this part
     print(result)
     return result

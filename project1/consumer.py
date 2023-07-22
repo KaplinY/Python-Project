@@ -13,9 +13,12 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from sqlalchemy.sql import func
 
 
 MQ_DSN = os.environ.get("MQ_DSN")
+SERVER_HOST = str(os.environ.get("SERVER_HOST"))
+SERVER_PORT = int(os.environ.get("SERVER_PORT"))
 
 async def on_message(message: AbstractIncomingMessage, session: AsyncSession):
     user_id = message.body
@@ -24,17 +27,16 @@ async def on_message(message: AbstractIncomingMessage, session: AsyncSession):
     stmt = select(Users.email).where(Users.user_id == user_id)
     email = await session.scalar(stmt)
     email = str(email)
-    stmt = select(Percents_data.percent).where(Percents_data.user_id == user_id)
-    percent = await session.scalars(stmt)
-    percent = percent.fetchall()
-    #percent = await session.execute(stmt)
-    #percent = percent.fetchall()
-    avg_percent = str(sum(percent)/len(percent))
-    all_entries = str(len(percent))
-    stmt = select(Percents_data.subtracted).where(Percents_data.user_id == user_id)
+    stmt = select(func.avg(Percents_data.percent)).where(Percents_data.user_id == user_id)
+    avg_percent = await session.scalar(stmt)
+    stmt = select(func.count(Percents_data.percent)).where(Percents_data.user_id == user_id)
+    all_entries = await session.scalar(stmt)
+    stmt = select(Percents_data.subtracted).where(Percents_data.user_id == user_id).group_by(Percents_data.subtracted)
     subtracted = await session.scalars(stmt)
     subtracted = subtracted.fetchall()
-    subtracted.sort()
+    
+    #percent = await session.execute(stmt)
+    #percent = percent.fetchall()
     length = len(subtracted)
     if length % 2 == 0:
         median = (subtracted[length // 2 - 1] + subtracted[length // 2])/2
@@ -62,7 +64,7 @@ async def on_message(message: AbstractIncomingMessage, session: AsyncSession):
     msg['To'] = email
     msg['Subject'] = "User's stats"
  
-    server = smtplib.SMTP("85.10.195.40",30025)
+    server = smtplib.SMTP(SERVER_HOST,SERVER_PORT)
     server.sendmail(msg['From'], msg['To'], msg.as_string())
     server.quit()
     #end of this part
@@ -93,27 +95,6 @@ async def main() -> None:
         await asyncio.Future()
     finally:
         await connection.close()              
-
-    # async def consume() -> None:
-    #     async with channel_pool.acquire() as channel:
-    #         await channel.set_qos(10)
-
-    #         queue = await channel.declare_queue(
-    #             "stats", durable=False, auto_delete=False,
-    #         )
-    #         async with async_session as session:
-    #             await session.commit()
-                
-    #             async with queue.iterator() as queue_iter:
-    #                 async for message in queue_iter:
-    #                     async with message.process():
-    #                         result = await on_message(message, session)
-    #                         print(result)
-    #                     await message.ack()
-
-    # async with connection_pool, channel_pool:
-    #     task = loop.create_task(consume())
-    #     await task
     
 if __name__ == "__main__":
     asyncio.run(main())

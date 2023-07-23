@@ -27,23 +27,15 @@ async def on_message(message: AbstractIncomingMessage, session: AsyncSession):
     stmt = select(Users.email).where(Users.user_id == user_id)
     email = await session.scalar(stmt)
     email = str(email)
-    stmt = select(func.avg(Percents_data.percent)).where(Percents_data.user_id == user_id)
-    avg_percent = await session.scalar(stmt)
-    stmt = select(func.count(Percents_data.percent)).where(Percents_data.user_id == user_id)
-    all_entries = await session.scalar(stmt)
-    stmt = select(Percents_data.subtracted).where(Percents_data.user_id == user_id).group_by(Percents_data.subtracted)
-    subtracted = await session.scalars(stmt)
-    subtracted = subtracted.fetchall()
+    stmt = select(func.avg(Percents_data.percent),func.count(Percents_data.percent),func.percentile_cont(0.5).within_group(Percents_data.subtracted)).where(Percents_data.user_id == user_id)
+    result = await session.execute(stmt)
+    result = result.fetchall()
+    result = result[0]
+    avg_percent = result[0]
+    all_entries = result[1]
+    median = result[2]
     
-    #percent = await session.execute(stmt)
-    #percent = percent.fetchall()
-    length = len(subtracted)
-    if length % 2 == 0:
-        median = (subtracted[length // 2 - 1] + subtracted[length // 2])/2
-    else:
-        median = subtracted[length // 2]
-    median = str(median)
-    result = str({"average percent":avg_percent, "all_entries":all_entries,"median of all subtractions":median})
+    stats = str({"average percent":avg_percent, "all_entries":all_entries,"median of all subtractions":median})
     #sending email part
     msg = MIMEMultipart()
  
@@ -68,7 +60,7 @@ async def on_message(message: AbstractIncomingMessage, session: AsyncSession):
     server.sendmail(msg['From'], msg['To'], msg.as_string())
     server.quit()
     #end of this part
-    return result
+    return stats
 
 
 async def main() -> None:

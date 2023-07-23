@@ -67,7 +67,7 @@ async def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = create_async_engine(str(DB_DSN))
+    connectable = create_async_engine(DB_DSN)
 
     async with connectable.connect() as connection:
         await connection.run_sync(show_migrations)

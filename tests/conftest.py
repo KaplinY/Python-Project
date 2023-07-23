@@ -50,7 +50,7 @@ async def dbsession(
     )
     session = session_maker()
     hashed_password = pbkdf2_sha256.hash("user!")
-    new_user = Users(username = "user", password = hashed_password)
+    new_user = Users(username = "user", password = hashed_password, email = "user@y.ru")
     session.add(new_user)
     await session.commit()
 

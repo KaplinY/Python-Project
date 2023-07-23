@@ -1,6 +1,6 @@
 name: Testing project1
 
-on: push
+on: pull_request
 
 jobs:
   pytest:
@@ -21,6 +21,17 @@ jobs:
           --health-retries=40
         ports:
         - 5432:5432
+      # rabbitmq:
+      #   image: rabbitmq:3-management-alpine
+      #   ports:
+      #       - 5672:5672
+      #       - 15672:15672
+      #   options: >-
+      #     --health-cmd ="rabbitmq-diagnostics -q ping"
+      #     --health-interval=30s
+      #     --health-timeout=30s
+      #     --health-retries=3
+          
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.11

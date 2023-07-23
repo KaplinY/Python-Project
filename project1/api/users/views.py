@@ -1,14 +1,18 @@
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Request
 from datetime import datetime, timedelta
 from passlib.hash import pbkdf2_sha256
 from jose import jwt
-from project1.dependencies.dependencies import get_async_session
+from project1.dependencies.dependencies import get_async_session, get_channel
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from .dtos import User, Token
 from project1.db.models import Users
+from aio_pika import Message, connect
+from project1.api.percents.views import get_current_user
+import os
+import aio_pika
 
 SECRET_KEY = "3cb260cf64fd0180f386da0e39d6c226137fe9abf98b738a70e4299e4c2afc93"
 ALGORITHM = "HS256"
@@ -17,6 +21,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
+
+MQ_DSN = os.environ.get("MQ_DSN")
 
 db_meta = sa.MetaData() 
 
@@ -41,7 +47,7 @@ def authenticate_user(username, password, hashed_password):
 async def add_user(item: User, session: AsyncSession = Depends(get_async_session)):
 
     hashed_password = pbkdf2_sha256.hash(item.password)
-    new_user = Users(username = item.username, password = hashed_password)
+    new_user = Users(username = item.username, password = hashed_password, email = item.email)
     session.add(new_user)
     await session.commit()
     await session.flush()
@@ -65,3 +71,15 @@ async def user_login(item: User, session: AsyncSession = Depends(get_async_sessi
     data={"sub": item.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/user_stats")
+async def get_user_stats(user: dict = Depends(get_current_user), session: AsyncSession = Depends(get_async_session), channel: aio_pika.Channel = Depends(get_channel)):
+
+    stmt = select(Users.user_id).where(Users.username == user)
+    user_id = await session.scalar(stmt)
+        
+    await channel.default_exchange.publish(
+        Message(str(user_id).encode()),
+        routing_key="stats",
+    )
+    return {user_id}

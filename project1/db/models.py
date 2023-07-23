@@ -15,6 +15,7 @@ class Users(Base):
     user_id: Mapped[int] = mapped_column(sa.BigInteger(), primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(sa.String(100), unique=True)
     password: Mapped[str] = mapped_column(sa.Text)
+    email: Mapped[str] = mapped_column(sa.Text, unique=True)
 
 class Percents_data(Base):
     __tablename__ = "percents_data"

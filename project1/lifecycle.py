@@ -4,12 +4,14 @@ import os
 import aio_pika
 from aio_pika.abc import AbstractRobustConnection
 from aio_pika.pool import Pool
+from taskiq_aio_pika import AioPikaBroker
 import asyncio
+from project1.tkq import broker
 
 
 def init_app(app: FastAPI): 
     @app.on_event("startup")
-    async def startup_event():
+    async def _startup_event():
         engine = create_async_engine(
         os.environ.get("DB_DSN"), echo = True,
         )
@@ -19,7 +21,7 @@ def init_app(app: FastAPI):
         engine, expire_on_commit=False
         )
     @app.on_event("startup")
-    async def startup_rabbitmq():
+    async def _startup_rabbitmq():
         async def get_connection() -> AbstractRobustConnection:
             return await aio_pika.connect_robust(os.environ.get("MQ_DSN"))
         loop = asyncio.get_event_loop()
@@ -36,6 +38,11 @@ def init_app(app: FastAPI):
             queue = await channel.declare_queue(
                 queue_name, durable=True
             )
+    @app.on_event("startup")
+    async def _app_startup():
+        if not broker.is_worker_process:
+            await broker.startup()
+
             
         
 

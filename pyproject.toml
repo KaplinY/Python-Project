@@ -22,6 +22,9 @@ alembic = "^1.10.4"
 pytest = "^7.3.2"
 httpx = "^0.24.1"
 aio-pika = "^9.1.3"
+taskiq = "^0.8.6"
+taskiq-aio-pika = "^0.4.0"
+taskiq-fastapi = "^0.3.0"
 
 
 [tool.poetry.group.dev.dependencies]

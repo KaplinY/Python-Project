@@ -534,6 +534,26 @@ files = [
 ]
 
 [[package]]
+name = "importlib-metadata"
+version = "6.8.0"
+description = "Read metadata from Python packages"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "importlib_metadata-6.8.0-py3-none-any.whl", hash = "sha256:3ebb78df84a805d7698245025b975d9d67053cd94c79245ba4b3eb694abe68bb"},
+    {file = "importlib_metadata-6.8.0.tar.gz", hash = "sha256:dbace7892d8c0c4ac1ad096662232f831d4e64f4c4545bd53016a3e9d4654743"},
+]
+
+[package.dependencies]
+zipp = ">=0.5"
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+perf = ["ipython"]
+testing = ["flufl.flake8", "importlib-resources (>=1.3)", "packaging", "pyfakefs", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy (>=0.9.1)", "pytest-perf (>=0.9.2)", "pytest-ruff"]
+
+[[package]]
 name = "iniconfig"
 version = "2.0.0"
 description = "brain-dead simple config-ini parsing"
@@ -1011,6 +1031,17 @@ files = [
 ]
 
 [[package]]
+name = "pycron"
+version = "3.0.0"
+description = "Simple cron-like parser, which determines if current datetime matches conditions."
+category = "main"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "pycron-3.0.0.tar.gz", hash = "sha256:b916044e3e8253d5409c68df3ac64a3472c4e608dab92f40e8f595e5d3acb3de"},
+]
+
+[[package]]
 name = "pydantic"
 version = "1.10.7"
 description = "Data validation and settings management using python type hints"
@@ -1261,6 +1292,77 @@ typing-extensions = {version = ">=3.10.0", markers = "python_version < \"3.10\""
 full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart", "pyyaml"]
 
 [[package]]
+name = "taskiq"
+version = "0.8.6"
+description = "Distributed task queue with full async support"
+category = "main"
+optional = false
+python-versions = ">=3.8.1,<4.0.0"
+files = [
+    {file = "taskiq-0.8.6-py3-none-any.whl", hash = "sha256:1801f5979793b39da55a1b9bf64cb89ad9c082125fdbc63ac5a7823294dedc7e"},
+    {file = "taskiq-0.8.6.tar.gz", hash = "sha256:6493098da7b77c5ec34ee97a6ee2fd369f52f72d7a61f3f676d53a982221fd4a"},
+]
+
+[package.dependencies]
+anyio = ">=3,<4"
+importlib-metadata = "*"
+packaging = ">=19"
+pycron = ">=3.0.0,<4.0.0"
+pydantic = ">=1.0,<=3.0"
+taskiq_dependencies = ">=1,<2"
+typing-extensions = ">=3.10.0.0"
+
+[package.extras]
+metrics = ["prometheus_client (>=0,<1)"]
+reload = ["gitignore-parser (>=0,<1)", "watchdog (>=2.1.9,<3.0.0)"]
+uv = ["uvloop (>=0.16.0,<1)"]
+zmq = ["pyzmq (>=23.2.0,<24.0.0)"]
+
+[[package]]
+name = "taskiq-aio-pika"
+version = "0.4.0"
+description = "RabbitMQ broker for taskiq"
+category = "main"
+optional = false
+python-versions = ">=3.8.1,<4.0.0"
+files = [
+    {file = "taskiq_aio_pika-0.4.0-py3-none-any.whl", hash = "sha256:3d96acf8ee5d9170bdc3f726b7a2f9d29f58e0fbc760fb13a50f40eeaa1368a3"},
+    {file = "taskiq_aio_pika-0.4.0.tar.gz", hash = "sha256:9295e911ad2c808e10571adee262dcfe51344a2aebba0fbc89249e666bbe44a1"},
+]
+
+[package.dependencies]
+aio-pika = ">=9.0,<10.0"
+taskiq = ">=0.6.0,<1"
+
+[[package]]
+name = "taskiq-dependencies"
+version = "1.3.0"
+description = "FastAPI like dependency injection implementation"
+category = "main"
+optional = false
+python-versions = ">=3.8.1,<4.0.0"
+files = [
+    {file = "taskiq_dependencies-1.3.0-py3-none-any.whl", hash = "sha256:e260bd8976b9190ac6d625a9c57bf9f43361afef3f9da585db4f8e2a141bda0f"},
+    {file = "taskiq_dependencies-1.3.0.tar.gz", hash = "sha256:9cbad8700325db895ac9d3442c8d7d97e4e2c3335910b52d5000227847b2f9dd"},
+]
+
+[[package]]
+name = "taskiq-fastapi"
+version = "0.3.0"
+description = "FastAPI integration for taskiq"
+category = "main"
+optional = false
+python-versions = ">=3.8.1,<4.0.0"
+files = [
+    {file = "taskiq_fastapi-0.3.0-py3-none-any.whl", hash = "sha256:93eae839c0df9f24d5dcaef9c617b21fbe2396ce0490dacbb39c6ca37be3a997"},
+    {file = "taskiq_fastapi-0.3.0.tar.gz", hash = "sha256:3beb52c389ebee528be6579794fde06809f3435fcd3af867f25add9b3f32576b"},
+]
+
+[package.dependencies]
+fastapi = "*"
+taskiq = ">=0.8.0,<1"
+
+[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -1403,7 +1505,23 @@ files = [
 idna = ">=2.0"
 multidict = ">=4.0"
 
+[[package]]
+name = "zipp"
+version = "3.16.2"
+description = "Backport of pathlib-compatible object wrapper for zip files"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "zipp-3.16.2-py3-none-any.whl", hash = "sha256:679e51dd4403591b2d6838a48de3d283f3d188412a9782faadf845f298736ba0"},
+    {file = "zipp-3.16.2.tar.gz", hash = "sha256:ebc15946aa78bd63458992fc81ec3b6f7b1e92d51c35e6de1c3804e73b799147"},
+]
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy (>=0.9.1)", "pytest-ruff"]
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "b07295f5799f78b9159cce7f1c3244e24a738fc50345c657322ea588585e9d46"
+content-hash = "74d9f157c0cceb0af5596186f8a150e72b198f636a0d464d0a40ea6f9431ff20"

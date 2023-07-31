@@ -15,7 +15,7 @@ from project1.tkq import broker
 
 MQ_DSN = os.environ.get("MQ_DSN")
 SERVER_HOST = str(os.environ.get("SERVER_HOST"))
-SERVER_PORT = int(os.environ.get("SERVER_PORT"))
+SERVER_PORT = os.environ.get("SERVER_PORT")
 
 async def on_message(user_id: int, session: AsyncSession):
     stmt = select(Users.email).where(Users.user_id == user_id)

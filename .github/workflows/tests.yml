@@ -48,3 +48,6 @@ jobs:
         DB_DSN: postgresql+asyncpg://percents:percents@localhost:5432/percents
         POSTGRES_HOST: localhost
         POSTGRES_PORT: 5432
+        SERVER_HOST: 85.10.195.40
+        SERVER_PORT: 30025
+        MQ_DSN: amqp://guest:guest@rabbitmq:5672/ 

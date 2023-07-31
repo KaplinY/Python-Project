@@ -63,17 +63,17 @@ async def test_calculate_percents(test_app: AsyncClient):
         }
     }
 
-# @pytest.mark.anyio
-# async def test_get_user_stats(test_app: AsyncClient):
-#     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-#     access_token = create_access_token(
-#     data={"sub": "user"}, expires_delta=access_token_expires
-#     )
-#     response = await test_app.post(
-#         "/users/user_stats",
-#         headers={"token": access_token},
-#     )
-#     assert response.status_code == 200
-#     assert response.json() == {
-#         [1]
-#     }
+@pytest.mark.anyio
+async def test_get_user_stats(test_app: AsyncClient):
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+    data={"sub": "user"}, expires_delta=access_token_expires
+    )
+    response = await test_app.post(
+        "/users/user_stats",
+        headers={"token": access_token},
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "data":1
+    }

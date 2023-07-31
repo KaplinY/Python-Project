@@ -46,9 +46,9 @@ services:
       timeout: 30s
       retries: 3
 
-  consumer:
+  broker:
     <<: *app
-    command: [python, project1/consumer.py]
+    command: [taskiq, worker, project1.tkq:broker, -fsd]
     ports: []
 
   database:

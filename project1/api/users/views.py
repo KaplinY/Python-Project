@@ -7,12 +7,15 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import APIRouter, Header
-from .dtos import User, Token
+from .dtos import User, Token, DefualtResponseModel
 from project1.db.models import Users
 from aio_pika import Message, connect
 from project1.api.percents.views import get_current_user
 import os
 import aio_pika
+from project1.tasks import my_task
+from pydantic import ValidationError
+
 
 SECRET_KEY = "3cb260cf64fd0180f386da0e39d6c226137fe9abf98b738a70e4299e4c2afc93"
 ALGORITHM = "HS256"
@@ -24,7 +27,7 @@ router = APIRouter(
 
 MQ_DSN = os.environ.get("MQ_DSN")
 
-db_meta = sa.MetaData() 
+db_meta = sa.MetaData()
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
@@ -47,12 +50,27 @@ def authenticate_user(username, password, hashed_password):
 async def add_user(item: User, session: AsyncSession = Depends(get_async_session)):
 
     hashed_password = pbkdf2_sha256.hash(item.password)
+    stmt = select(Users.user_id).where(Users.username == item.username)
+    user_id = await session.scalar(stmt)
+    if user_id:
+        raise HTTPException(
+            status_code = 403,
+            detail="This user already exists",
+            headers={"Error":"Try another username"}
+        )
     new_user = Users(username = item.username, password = hashed_password, email = item.email)
     session.add(new_user)
     await session.commit()
     await session.flush()
+    try:
+        return DefualtResponseModel(data = 'User added succesfully')
+    except ValidationError:
+        raise HTTPException(
+            status_code=405,
+            detail="User can not be added",
+            headers={"Error":"Try another username or password"}
+        )
     
-
 @router.post("/authenticate_user")
 async def user_login(item: User, session: AsyncSession = Depends(get_async_session)):
 
@@ -62,7 +80,7 @@ async def user_login(item: User, session: AsyncSession = Depends(get_async_sessi
 
     if not user:
         raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
+        status_code=401,
         detail="Incorrect username or password",
         headers={"WWW-Authenticate": "Bearer"},
             )
@@ -70,16 +88,12 @@ async def user_login(item: User, session: AsyncSession = Depends(get_async_sessi
     access_token = create_access_token(
     data={"sub": item.username}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return DefualtResponseModel(data = {"access_token": access_token, "token_type": "bearer"})
 
 @router.post("/user_stats")
-async def get_user_stats(user: dict = Depends(get_current_user), session: AsyncSession = Depends(get_async_session), channel: aio_pika.Channel = Depends(get_channel)):
-
+async def get_user_stats(user: dict = Depends(get_current_user), session: AsyncSession = Depends(get_async_session)):
     stmt = select(Users.user_id).where(Users.username == user)
     user_id = await session.scalar(stmt)
         
-    await channel.default_exchange.publish(
-        Message(str(user_id).encode()),
-        routing_key="stats",
-    )
-    return {user_id}
+    await my_task.kiq(user_id)
+    return DefualtResponseModel(data = user_id)

@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 from pydantic import validator
+from typing import Generic, Optional, TypeVar
+
+T = TypeVar('T')
 
 class User(BaseModel):
     username: str
@@ -26,3 +29,6 @@ class User(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class DefualtResponseModel(BaseModel, Generic[T]):
+    data: Optional[T] = None

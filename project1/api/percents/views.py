@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import APIRouter, Header
-from .dtos import Percents
+from .dtos import Percents, DefualtResponseModel
 from project1.db.models import Users, Percents_data
 
 SECRET_KEY = "3cb260cf64fd0180f386da0e39d6c226137fe9abf98b738a70e4299e4c2afc93"
@@ -20,12 +20,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token", scheme_name="JWT")
 db_meta = sa.MetaData() 
 
 router = APIRouter(
-    responses={404: {"description": "Not found"}},
+    responses={404: {"detail": "Not found"}},
 )
 
 async def get_current_user(token: str = Header(default=None)):
     credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
+        status_code=401,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
@@ -42,7 +42,11 @@ async def get_current_user(token: str = Header(default=None)):
 async def create_item(item: Percents, user: dict = Depends(get_current_user), session: AsyncSession = Depends(get_async_session)):
 
     if item.percent < 0:
-        return {"message": "try positive value"}
+        raise HTTPException(
+            status_code=400,
+            detail="Could not process with this request",
+            headers={"Error": "Try positive value"}
+        )
     else:
         sum = item.value + item.percent*item.value/100
         sub = item.value - item.percent*item.value/100
@@ -58,4 +62,4 @@ async def create_item(item: Percents, user: dict = Depends(get_current_user), se
     session.add(new_perc)
     await session.commit()
 
-    return item_dict_result
+    return DefualtResponseModel(data = item_dict_result)

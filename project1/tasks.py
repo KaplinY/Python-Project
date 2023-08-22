@@ -11,6 +11,8 @@ from sqlalchemy.sql import func
 from taskiq import TaskiqDepends
 from project1.dependencies.dependencies import get_async_session
 from project1.tkq import broker
+from fastapi import Request
+from project1.api.websockets.views import manager
 
 
 MQ_DSN = os.environ.get("MQ_DSN")
@@ -57,7 +59,10 @@ async def on_message(user_id: int, session: AsyncSession):
 
 @broker.task
 async def my_task(user_id: int, session: AsyncSession = TaskiqDepends(get_async_session)) -> None:
-    print(user_id, session, "#" * 20)
-    import logging
-    logging.info("#" * 20 , user_id, session)
+    # print(user_id, session, "#" * 20)
+    # import logging
+    # logging.info("#" * 20 , user_id, session)
     await on_message(user_id, session)
+
+
+

@@ -1,12 +1,14 @@
+import uuid
 from fastapi import APIRouter, FastAPI
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 import os
 import aio_pika
-from aio_pika.abc import AbstractRobustConnection
+from aio_pika.abc import AbstractRobustConnection, AbstractIncomingMessage
 from aio_pika.pool import Pool
 from taskiq_aio_pika import AioPikaBroker
 import asyncio
 from project1.tkq import broker
+from project1.api.websockets.manager import manager
 
 
 def init_app(app: FastAPI): 
@@ -42,6 +44,22 @@ def init_app(app: FastAPI):
     async def _app_startup():
         if not broker.is_worker_process:
             await broker.startup()
+    @app.on_event("startup")
+    async def _start_exchange():
+        connection = await aio_pika.connect_robust(url = os.environ.get("MQ_DSN"))
+        channel = await connection.channel()
+        exchange = await channel.declare_exchange(name = "currency", type = aio_pika.ExchangeType.FANOUT)
+        queue = await channel.declare_queue(name = uuid.uuid4().hex, auto_delete=True)
+        await queue.bind(exchange,routing_key=uuid.uuid4().hex)
+        async def on_message(message: AbstractIncomingMessage):
+            async with message.process():
+                value = message.body.decode()
+                await manager.broadcast(f"1$ is currently:{value}")    
+        await queue.consume(callback=on_message)
+        
+
+
+        
 
             
         
